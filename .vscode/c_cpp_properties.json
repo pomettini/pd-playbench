@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "name": "Playdate Device",
+      "includePath": [
+        "${workspaceFolder}/src",
+        "/Users/pomettini/Developer/PlaydateSDK/C_API"
+      ],
+      "defines": [
+        "TARGET_EXTENSION=1",
+        "TARGET_PLAYDATE=1",
+        "PD_PLAYBENCH_ENABLED=1"
+      ],
+      "compilerPath": "/usr/bin/clang",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "macos-clang-arm64",
+      "browse": {
+        "path": [
+          "${workspaceFolder}/src",
+          "/Users/pomettini/Developer/PlaydateSDK/C_API"
+        ],
+        "limitSymbolsToIncludedHeaders": true
+      }
+    }
+  ],
+  "version": 4
+}

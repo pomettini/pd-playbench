@@ -412,11 +412,7 @@ static void pb_build_report(char* buffer, size_t size)
     size_t used = 0;
 
     if (!device_label) {
-#if defined(TARGET_SIMULATOR)
-        device_label = "simulator";
-#else
         device_label = "device";
-#endif
     }
 
     if (stats->measured_frames > 0) {
