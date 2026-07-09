@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+._*
+
+# Build output
+build/
+out/
+dist/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.elf
+*.map
+
+# Playdate build artifacts
+*.pdx/
+*.pdx.zip
+pdex.bin
+pdex.dylib
+pdex.so
+
+# Editor and tooling noise
+*.swp
+*.swo
+*.tmp
+.cache/
+
+# Local benchmark output
+benchmarks/latest.txt
+benchmarks/*.csv
