@@ -1,0 +1,10 @@
+# Super Mario Bros smoke test
+wait 120
+press A 6
+wait 300
+hold RIGHT 180
+hold RIGHT+B 120
+press A 8
+hold RIGHT+B 240
+wait 60
+stop
