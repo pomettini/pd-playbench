@@ -64,6 +64,10 @@ typedef struct PDBenchState {
     int measurement_active;
     int current_script_buttons;
 
+    int recording;
+    int rec_prev_buttons;
+    int rec_run_frames;
+
     PDBenchStats stats;
     char last_error[128];
     char file_buffer[PD_PLAYBENCH_FILE_BUFFER_SIZE];
@@ -862,6 +866,129 @@ void pd_playbench_print_report(void)
         }
         line = next + 1;
     }
+}
+
+/* ---------------------------------------------------------------------------
+** Record mode: capture per-frame buttons and emit a script in the same format
+** the parser reads, so recordings round-trip straight back into replay.
+** ------------------------------------------------------------------------ */
+
+static int pb_pd_to_bench(PDButtons b)
+{
+    int t = 0;
+    if (b & kButtonLeft)  t |= PD_BENCH_BUTTON_LEFT;
+    if (b & kButtonRight) t |= PD_BENCH_BUTTON_RIGHT;
+    if (b & kButtonUp)    t |= PD_BENCH_BUTTON_UP;
+    if (b & kButtonDown)  t |= PD_BENCH_BUTTON_DOWN;
+    if (b & kButtonA)     t |= PD_BENCH_BUTTON_A;
+    if (b & kButtonB)     t |= PD_BENCH_BUTTON_B;
+    return t;
+}
+
+static void pb_button_names(int buttons, char* out, size_t size)
+{
+    size_t used = 0;
+
+    out[0] = '\0';
+    if (buttons & PD_BENCH_BUTTON_RIGHT) pb_appendf(out, size, &used, "%sRIGHT", used ? "+" : "");
+    if (buttons & PD_BENCH_BUTTON_LEFT)  pb_appendf(out, size, &used, "%sLEFT",  used ? "+" : "");
+    if (buttons & PD_BENCH_BUTTON_UP)    pb_appendf(out, size, &used, "%sUP",    used ? "+" : "");
+    if (buttons & PD_BENCH_BUTTON_DOWN)  pb_appendf(out, size, &used, "%sDOWN",  used ? "+" : "");
+    if (buttons & PD_BENCH_BUTTON_A)     pb_appendf(out, size, &used, "%sA",     used ? "+" : "");
+    if (buttons & PD_BENCH_BUTTON_B)     pb_appendf(out, size, &used, "%sB",     used ? "+" : "");
+    if (used == 0) pb_appendf(out, size, &used, "NONE");
+}
+
+static void pb_record_flush(void)
+{
+    if (g_pb.rec_run_frames <= 0) {
+        return;
+    }
+    pb_add_command(g_pb.rec_prev_buttons == 0 ? PB_CMD_WAIT : PB_CMD_INPUT,
+                   g_pb.rec_prev_buttons, g_pb.rec_run_frames);
+    g_pb.rec_run_frames = 0;
+}
+
+static void pb_record_finalize(void)
+{
+    if (!g_pb.recording) {
+        return; /* already finalized; do not append a second stop */
+    }
+    pb_record_flush();
+    pb_add_command(PB_CMD_STOP, 0, 0);
+    g_pb.recording = 0;
+}
+
+static void pb_serialize(char* buffer, size_t size)
+{
+    size_t used = 0;
+    int i;
+
+    buffer[0] = '\0';
+    for (i = 0; i < g_pb.command_count; i++) {
+        PDBenchCommand* c = &g_pb.commands[i];
+        if (c->type == PB_CMD_STOP) {
+            pb_appendf(buffer, size, &used, "stop\n");
+        } else if (c->type == PB_CMD_WAIT || c->buttons == 0) {
+            pb_appendf(buffer, size, &used, "wait %d\n", c->frames);
+        } else {
+            char names[64];
+            pb_button_names(c->buttons, names, sizeof(names));
+            pb_appendf(buffer, size, &used, "hold %s %d\n", names, c->frames);
+        }
+    }
+}
+
+void pd_playbench_record_start(void)
+{
+    g_pb.command_count = 0;
+    g_pb.recording = 1;
+    g_pb.rec_prev_buttons = 0;
+    g_pb.rec_run_frames = 0;
+    strcpy(g_pb.last_error, "ok");
+}
+
+void pd_playbench_record_sample(PDButtons buttons)
+{
+    int t;
+
+    if (!g_pb.recording) {
+        return;
+    }
+    t = pb_pd_to_bench(buttons);
+    if (t == g_pb.rec_prev_buttons) {
+        g_pb.rec_run_frames++;
+    } else {
+        pb_record_flush();
+        g_pb.rec_prev_buttons = t;
+        g_pb.rec_run_frames = 1;
+    }
+}
+
+const char* pd_playbench_record_string(void)
+{
+    pb_record_finalize();
+    pb_serialize(g_pb.file_buffer, sizeof(g_pb.file_buffer));
+    return g_pb.file_buffer;
+}
+
+int pd_playbench_record_save(const char* path)
+{
+    const char* text = pd_playbench_record_string();
+    SDFile* file;
+
+    if (!g_pb.pd || !g_pb.pd->file || !path) {
+        pb_set_error("file API unavailable");
+        return 0;
+    }
+    file = g_pb.pd->file->open(path, kFileWrite);
+    if (!file) {
+        pb_set_error("could not open '%s' for write", path);
+        return 0;
+    }
+    g_pb.pd->file->write(file, text, (unsigned int)strlen(text));
+    g_pb.pd->file->close(file);
+    return 1;
 }
 
 #endif

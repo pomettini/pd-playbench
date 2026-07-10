@@ -71,6 +71,16 @@ void pd_playbench_report_frame(float frame_time_ms, int skipped_frames);
 void pd_playbench_save_report(const char* path);
 void pd_playbench_print_report(void);
 
+/* Record mode: capture a live session into the same script format that the
+   replay side parses (round-trip). Call record_sample once per frame with the
+   host's current buttons; record_save/record_string emit a wait/hold/stop
+   script. The host maps any non-standard inputs (e.g. a crank) to PDButtons
+   before calling record_sample; the library stays console-agnostic. */
+void pd_playbench_record_start(void);
+void pd_playbench_record_sample(PDButtons buttons);
+int  pd_playbench_record_save(const char* path);
+const char* pd_playbench_record_string(void);
+
 #else
 
 static inline void pd_playbench_init(PlaydateAPI* playdate, const PDBenchConfig* config) { (void)playdate; (void)config; }
@@ -101,6 +111,11 @@ static inline void pd_playbench_report_frame(float frame_time_ms, int skipped_fr
 
 static inline void pd_playbench_save_report(const char* path) { (void)path; }
 static inline void pd_playbench_print_report(void) {}
+
+static inline void pd_playbench_record_start(void) {}
+static inline void pd_playbench_record_sample(PDButtons buttons) { (void)buttons; }
+static inline int  pd_playbench_record_save(const char* path) { (void)path; return 0; }
+static inline const char* pd_playbench_record_string(void) { return ""; }
 
 #endif
 

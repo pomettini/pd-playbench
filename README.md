@@ -197,10 +197,45 @@ exist.
 Override mode is the default because benchmarking should not depend on accidental
 real button input.
 
+## Recording
+
+You can capture a live play session into a script instead of writing one by
+hand. Recording emits the exact same `wait`/`hold`/`stop` format the parser
+reads, so a recording round-trips straight back into replay.
+
+```c
+void init_recording(void) {
+    pd_playbench_record_start();
+}
+
+// In the update loop, once per frame:
+PDButtons current;
+playdate->system->getButtonState(&current, NULL, NULL);
+pd_playbench_record_sample(current);
+
+// When done (e.g. a menu action):
+pd_playbench_record_save("scripts/mysession.txt");
+// or: const char* script = pd_playbench_record_string();
+```
+
+The library records the six standard `PDButtons`. Map any non-standard input to
+`PDButtons` before calling `record_sample` — e.g. an emulator that puts NES Start
+on the crank records it as the `UP` bit and maps `UP` back to Start on replay.
+
+**Deterministic replay requires a deterministic host.** For a recording to
+replay identically (including across Rev A/Rev B), the host must remove all
+wall-clock-driven behaviour from the emulated run while recording *and*
+replaying — most importantly **disable frameskip** (skipped frames often take a
+different code path) and **advance audio by a fixed number of samples per frame**
+rather than by elapsed real time. Any real-time input desyncs a replay from its
+recording.
+
 ## Notes
 
 - No dynamic allocation is used.
-- Scripts are parsed into a fixed command buffer.
+- Scripts are parsed into a fixed command buffer; recording reuses the same
+  buffer, so a recording is capped at `PD_PLAYBENCH_MAX_COMMANDS` runs (raise it
+  with `-DPD_PLAYBENCH_MAX_COMMANDS=...` for long sessions).
 - Everything runs in frame counts internally.
 - `MENU` is accepted by the script parser, but it does not map to a normal
   `PDButtons` bit in the standard Playdate C API.
