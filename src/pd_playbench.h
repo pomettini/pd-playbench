@@ -59,6 +59,7 @@ int pd_playbench_is_finished(void);
 
 void pd_playbench_update(void);
 PDButtons pd_playbench_get_buttons(PDButtons real_buttons);
+int pd_playbench_get_script_button_mask(void);
 
 void pd_playbench_set_input_mode(PDBenchInputMode mode);
 void pd_playbench_set_manual_trigger_button(PDButtons button_mask);
@@ -74,10 +75,11 @@ void pd_playbench_print_report(void);
 /* Record mode: capture a live session into the same script format that the
    replay side parses (round-trip). Call record_sample once per frame with the
    host's current buttons; record_save/record_string emit a wait/hold/stop
-   script. The host maps any non-standard inputs (e.g. a crank) to PDButtons
-   before calling record_sample; the library stays console-agnostic. */
+   script. record_sample_mask accepts PDBenchButton bits as an escape hatch for
+   virtual inputs such as MENU that have no PDButtons representation. */
 void pd_playbench_record_start(void);
 void pd_playbench_record_sample(PDButtons buttons);
+void pd_playbench_record_sample_mask(int buttons);
 int  pd_playbench_record_save(const char* path);
 const char* pd_playbench_record_string(void);
 
@@ -100,6 +102,7 @@ static inline int pd_playbench_is_finished(void) { return 0; }
 
 static inline void pd_playbench_update(void) {}
 static inline PDButtons pd_playbench_get_buttons(PDButtons real_buttons) { return real_buttons; }
+static inline int pd_playbench_get_script_button_mask(void) { return 0; }
 
 static inline void pd_playbench_set_input_mode(PDBenchInputMode mode) { (void)mode; }
 static inline void pd_playbench_set_manual_trigger_button(PDButtons button_mask) { (void)button_mask; }
@@ -114,6 +117,7 @@ static inline void pd_playbench_print_report(void) {}
 
 static inline void pd_playbench_record_start(void) {}
 static inline void pd_playbench_record_sample(PDButtons buttons) { (void)buttons; }
+static inline void pd_playbench_record_sample_mask(int buttons) { (void)buttons; }
 static inline int  pd_playbench_record_save(const char* path) { (void)path; return 0; }
 static inline const char* pd_playbench_record_string(void) { return ""; }
 

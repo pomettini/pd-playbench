@@ -757,6 +757,11 @@ PDButtons pd_playbench_get_buttons(PDButtons real_buttons)
     return script_buttons;
 }
 
+int pd_playbench_get_script_button_mask(void)
+{
+    return g_pb.running ? g_pb.current_script_buttons : 0;
+}
+
 void pd_playbench_set_input_mode(PDBenchInputMode mode)
 {
     g_pb.input_mode = mode;
@@ -896,6 +901,7 @@ static void pb_button_names(int buttons, char* out, size_t size)
     if (buttons & PD_BENCH_BUTTON_DOWN)  pb_appendf(out, size, &used, "%sDOWN",  used ? "+" : "");
     if (buttons & PD_BENCH_BUTTON_A)     pb_appendf(out, size, &used, "%sA",     used ? "+" : "");
     if (buttons & PD_BENCH_BUTTON_B)     pb_appendf(out, size, &used, "%sB",     used ? "+" : "");
+    if (buttons & PD_BENCH_BUTTON_MENU)  pb_appendf(out, size, &used, "%sMENU", used ? "+" : "");
     if (used == 0) pb_appendf(out, size, &used, "NONE");
 }
 
@@ -948,14 +954,17 @@ void pd_playbench_record_start(void)
     strcpy(g_pb.last_error, "ok");
 }
 
-void pd_playbench_record_sample(PDButtons buttons)
+void pd_playbench_record_sample_mask(int buttons)
 {
-    int t;
+    const int supported = PD_BENCH_BUTTON_LEFT | PD_BENCH_BUTTON_RIGHT |
+                          PD_BENCH_BUTTON_UP | PD_BENCH_BUTTON_DOWN |
+                          PD_BENCH_BUTTON_A | PD_BENCH_BUTTON_B |
+                          PD_BENCH_BUTTON_MENU;
+    int t = buttons & supported;
 
     if (!g_pb.recording) {
         return;
     }
-    t = pb_pd_to_bench(buttons);
     if (t == g_pb.rec_prev_buttons) {
         g_pb.rec_run_frames++;
     } else {
@@ -963,6 +972,11 @@ void pd_playbench_record_sample(PDButtons buttons)
         g_pb.rec_prev_buttons = t;
         g_pb.rec_run_frames = 1;
     }
+}
+
+void pd_playbench_record_sample(PDButtons buttons)
+{
+    pd_playbench_record_sample_mask(pb_pd_to_bench(buttons));
 }
 
 const char* pd_playbench_record_string(void)
